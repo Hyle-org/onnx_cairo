@@ -11,15 +11,10 @@ from sklearn.model_selection import train_test_split
 
 import xgboost as xgb
 
-import joblib
-from onnxmltools.convert import convert_xgboost
-from onnxmltools.convert.common.data_types import FloatTensorType
-import onnx
-
 import os
 from ferplus import FerPlus
 
-folder = '/home/alexandre/Documents/repos/facial-recog/FERPlus'
+folder = './FERPlus'
     
 training_data = FerPlus('Training', os.path.join(folder, "fer2013new.csv"), folder)
 test_data = FerPlus('PublicTest', os.path.join(folder, "fer2013new.csv"), folder)
@@ -45,24 +40,15 @@ print(len(score_list))
 img_dataframe = pd.DataFrame(img_list)
 score_dataframe = pd.Series([0 if s < 0.3 else 1 for s in score_list])
 
-params = {
-    "tree_method": "hist",
-    "device": "cpu",
-    "n_estimators": 16,
-    "colsample_bylevel": 0.7,
-}
+params = {'colsample_bytree': 0.8, 'gamma': 0, 'learning_rate': 0.5, 'max_depth': 3, 'min_child_weight': 3, 'n_estimators': 150, 'reg_alpha': 0, 'reg_lambda': 1, 'subsample': 1.0}
 
-def categorical_model(X, y, output_dir):
+def categorical_model(X, y, model_file):
     """Train using builtin categorical data support from XGBoost"""
-    print("start training")
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, random_state=1994, test_size=0.2
     )
 
-    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-    
-    # Specify `enable_categorical` to True.
     clf = xgb.XGBClassifier(
         **params,
         eval_metric="auc",
@@ -70,35 +56,42 @@ def categorical_model(X, y, output_dir):
         max_cat_to_onehot=1,  # We use optimal partitioning exclusively
     )
     
-    clf.fit(X_train, y_train, eval_set=[(X_test, y_test), (X_train, y_train)])
-    clf.save_model(os.path.join(output_dir, "xgboost_model.json"))
-
-    print(clf.get_params())
-
-    # simplified_model, transformer = mcr(model = clf,
-    #      X_train = X_train,
-    #      y_train = y_train, 
-    #      X_eval = X_test, 
-    #      y_eval = y_test, 
-    #      eval_metric = 'rmse',
-    #      transform_features = True)
+    clf.fit(X, y, eval_set=[(X_test, y_test), (X_train, y_train)])
     
-    #print(simplified_model.get_params())
-    
-    serialize_model(clf, "serialized.json")
-
-    joblib.dump(clf, os.path.join(output_dir, "xgboost_model.pkl"))
+    serialize_model(clf, model_file)
 
     y_score = clf.predict_proba(X_test)[:, 1]  # proba of positive samples
+    print(y_score)
     auc = roc_auc_score(y_test, y_score)
     print("AUC of using builtin categorical data support:", auc)
     return clf
+"""
+    from sklearn.model_selection import GridSearchCV
 
-model = categorical_model(img_dataframe, score_dataframe, '/home/alexandre/Documents/repos/facial-recog/')
+    param_grid = {
+        'n_estimators': [300],
+        'learning_rate': [0.5],
+        'max_depth': [3],
+        'min_child_weight': [3],
+        'gamma': [0],
+        'subsample': [1.0],
+        'colsample_bytree': [0.8],
+        'reg_alpha': [0],
+        'reg_lambda': [1]
+    }
 
-initial_types = [('input', FloatTensorType([None, 48 * 48]))]
-print(initial_types)
 
-# Convertir le modèle XGBoost en format ONNX
-onnx_model = convert_xgboost(model, initial_types=initial_types)
-onnx.save_model(onnx_model, 'xgboost_model.onnx')
+    xgb_m = xgb.XGBClassifier()
+    grid_search = GridSearchCV(estimator=xgb_m, param_grid=param_grid, cv=3, scoring='accuracy', n_jobs=-1, verbose=2)
+    grid_search.fit(X, y)
+
+    print(f"Best parameters: {grid_search.best_params_}")
+    print(f"Best score: {grid_search.best_score_}")
+"""
+
+    #print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+    
+    # Specify `enable_categorical` to True.
+    
+
+categorical_model(img_dataframe, score_dataframe, "serialized_optimized.json")

@@ -19,9 +19,6 @@ print(len(img_list))
 
 img_dataframe = pd.DataFrame(img_list)
 
-MODEL_ID = 844  # Update with your model ID
-VERSION_ID = 6  # Update with your version ID
-
 def prediction(input, model_id, version_id):
     model = GizaModel(id=model_id, version=version_id)
 
@@ -31,6 +28,10 @@ def prediction(input, model_id, version_id):
 
     return result, proof_id
 
-image_to_test = img_dataframe.iloc[[0]]
-result = prediction(image_to_test, MODEL_ID, VERSION_ID)
+
+MODEL_ID = 845  # Update with your model ID
+VERSION_ID = 8  # Update with your version ID
+
+print(img_list[0])
+result = prediction(img_list[0], MODEL_ID, VERSION_ID)
 print(result)
