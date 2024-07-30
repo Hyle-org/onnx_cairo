@@ -1,6 +1,10 @@
+# FERPlus
+
+We used the dataset FERPlus https://github.com/microsoft/FERPlus and followed the README to prepare it for use.
+
 # Giza account
 
-Please follow Giza documentation to set up an account, so you can use their api
+Please follow Giza documentation to set up an account, so you can use their api here https://docs.gizatech.xyz/welcome/quickstart
 
 # Train the XGBoost model
 
